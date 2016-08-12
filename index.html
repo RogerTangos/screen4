@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BigDAWG Screen 4c</title>
+  <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+  <script type="text/javascript" src="http://x3dom.org/x3dom/dist/x3dom-full.js"></script>
+  <script type="text/javascript" src="js/corr.js"></script>
+  <script type="text/javascript" src="js/leaflet.js"></script>
+  <script type="text/javascript" src="js/linreg.js"></script>
+  <link rel="shortcut icon" href="" />
+  <link rel="stylesheet" type="text/css" href="http://www.x3dom.org/download/dev/x3dom.css" />
+  <link rel="stylesheet" type="text/css" href="css/leaflet.css" />
+  <link rel="stylesheet" type="text/css" href="css/tupleware.css" />
+</head>
+<body>
+  <h1>Screen 4c: Correlation and Spatial Model</h1>
+  <div id="map">
+    <div id="mapid"></div>
+  </div>
+  <div id="wrapper">
+    <div id="corr">
+      <div id="corr_canvas"></div>
+    </div>
+    <div id="linreg">
+      <div id="linreg_canvas"></div>
+      <div id="linreg_form">
+        <form oninput="test();">
+          <select id="label" name="label" onchange="train(); test();">
+            <option value="prochloro">prochloro</option>
+            <option value="synecho">synecho</option>
+            <option value="picoeuk">picoeuk</option>
+            <option value="beads">beads</option>
+          </select>
+          lat:<input id="lat" type="number" step="0.1" value="22.0">
+          long:<input id="long" type="number" step="0.1" value="-157.0">
+          <output id="conc" name="conc" for="label lat long""></output>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script>
+    function request(msg) {
+      var req = new XMLHttpRequest();
+      req.open("POST", "http://localhost:9999", false);
+      req.setRequestHeader("Content-type", "application/json");
+      req.send(JSON.stringify(msg));
+      return JSON.parse(req.responseText);
+    }
+
+    //map
+    var map = L.map("mapid").setView([22.1, -157.0], 6);
+    var popup = L.popup();
+    L.tileLayer(
+        "http://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}", {
+          attribution: "Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri",
+          maxZoom: 13,
+          minZoom: 2,
+          id: "alacarter.jh6di32d",
+          accessToken: "pk.eyJ1IjoiYWxhY2FydGVyIiwiYSI6ImdYbndnVUEifQ.u6xXEp3n8BBm_vHj_0jAvQ"
+    }).addTo(map);
+
+    var req = {"id": "coord"};
+    var rep = request(req);
+    var lat = rep["lat"];
+    var long = rep["long"];
+
+  for (var i = 0; i < lat.length; i++) {
+var circle = L.circle([Number(lat[i]),Number(long[i])], 10, {
+    color: 'red',
+    fillColor: 'red',
+    fillOpacity: 0.5
+}).addTo(map);
+}
+  /*
+  //var opts = {fillOpacity: 0.5, color: "#e6002e", fillColor: "#ff0033"}
+  for (var i = 0; i < lat.length; i++) {
+    ///console.log([Number(lat[i]), Number(long[i])])
+        var options = {
+            fillOpacity: 0.5,
+            color: '#e6002e',
+            fillColor: '#ff0033'
+        };
+    var circle = L.circle([Number(lat[i]), Number(long[i])], 1000, options).addTo(mymap);
+        var pp = "Station ID"
+        circle.bindPopup(pp);
+}*/
+
+    //corr
+    corr(d3.select("#corr_canvas"));
+
+    //linreg
+    function train() {
+      linreg_train(d3.select("#linreg_canvas"),
+          d3.select("#label").node().value);
+    }
+
+    function test() {
+      linreg_test(d3.select("#label").node().value,
+          d3.select("#lat").node().value,
+          d3.select("#long").node().value,
+          d3.select("#conc"));
+    }
+
+    d3.select("#linreg_canvas").style("height","340px").style("width","340px");
+    var x3d = d3.select("#linreg_canvas").append("x3d")
+        .style("width", parseInt(d3.select("#linreg_canvas").style("width")) + "px")
+        .style("height", parseInt(d3.select("#linreg_canvas").style("height")) + "px")
+        .style("border", "none");
+
+    var scene = x3d.append("scene");
+    scene.append("orthoviewpoint")
+        .attr("centerOfRotation", [5,5,5])
+        .attr("fieldOfView", [-5,-5,15,15])
+        .attr("orientation", [-0.5,1,0.2,1.12*Math.PI/4])
+        .attr("position", [8,4,15]);
+
+    train();
+    test();
+  </script>
+</body>
+</html>
